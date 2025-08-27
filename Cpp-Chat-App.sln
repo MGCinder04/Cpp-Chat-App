@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22 d17.14
+VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cpp-Chat-App", "Cpp-Chat-App.vcxproj", "{89A0D091-7FEC-4436-9FA1-BEBEC4BFFA58}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "server", "server\server.vcxproj", "{E40C0670-9EE9-4515-9624-BF37540C6DA3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,14 @@ Global
 		{89A0D091-7FEC-4436-9FA1-BEBEC4BFFA58}.Release|x64.Build.0 = Release|x64
 		{89A0D091-7FEC-4436-9FA1-BEBEC4BFFA58}.Release|x86.ActiveCfg = Release|Win32
 		{89A0D091-7FEC-4436-9FA1-BEBEC4BFFA58}.Release|x86.Build.0 = Release|Win32
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Debug|x64.ActiveCfg = Debug|x64
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Debug|x64.Build.0 = Debug|x64
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Debug|x86.ActiveCfg = Debug|Win32
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Debug|x86.Build.0 = Debug|Win32
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Release|x64.ActiveCfg = Release|x64
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Release|x64.Build.0 = Release|x64
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Release|x86.ActiveCfg = Release|Win32
+		{E40C0670-9EE9-4515-9624-BF37540C6DA3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
