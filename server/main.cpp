@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <algorithm>
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -31,6 +32,19 @@ void interactWithClient(SOCKET clientSocket, vector<SOCKET> &clients)
 		{
 			string message(buffer, buffer + bytesReceived);
 			cout << "message from client: " << message << endl;
+			
+			// broadcast message to all clients
+			for (SOCKET s : clients)
+			{
+				if (s != clientSocket)
+				{
+					int sent = send(s, message.c_str(), static_cast<int>(message.size()), 0);
+					if (sent == SOCKET_ERROR)
+					{
+						cerr << "send failed: " << WSAGetLastError() << endl;
+					}
+				}
+			}
 		}
 		else if (bytesReceived == 0)
 		{
@@ -42,18 +56,9 @@ void interactWithClient(SOCKET clientSocket, vector<SOCKET> &clients)
 			cerr << "receive failed: " << WSAGetLastError() << endl;
 			break;
 		}
-		// broadcast message to all clients
-		for (SOCKET s : clients)
-		{
-			if (s != clientSocket)
-			{
-				int sent = send(s, buffer, bytesReceived, 0);
-				if (sent == SOCKET_ERROR)
-				{
-					cerr << "send failed: " << WSAGetLastError() << endl;
-				}
-			}
-		}
+		auto it = find(clients.begin(), clients.end(), clientSocket);
+		if (it != clients.end())
+			clients.erase(it);
 	}
 	closesocket(clientSocket);
 }
@@ -85,10 +90,10 @@ int main()
 	// bind and listen
 	// listen on all interfaces
 	int port = 41030;
-	sockaddr_in serverAddr{}; 
+	sockaddr_in serverAddr{};
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(port);
-	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenSocket, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
 	{
