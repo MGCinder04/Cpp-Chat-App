@@ -36,18 +36,71 @@ int main()
 	}
 
 	// create address structure
+	int port = 41030;
 	sockaddr_in serverAddr;
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(41030);
+	serverAddr.sin_port = htons(port);
 
 	// convert ipaddress (0.0.0.0) and put it inside sin_family from text to binary
 	if (InetPton(AF_INET, _T("0.0.0.0"), &serverAddr.sin_addr) != 1)
 	{
-		cout << "setting address failed: " << WSAGetLastError() << endl;
+		cerr << "setting address failed: " << WSAGetLastError() << endl;
 		closesocket(lsitenSocket);
 		WSACleanup();
 		return 1;
 	};
+
+	// bind the ip address and port to a socket
+	if (bind(lsitenSocket, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
+	{
+		cerr << "bind failed: " << WSAGetLastError() << endl;
+		closesocket(lsitenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	// put the socket in listening mode
+	if (listen(lsitenSocket, SOMAXCONN) == SOCKET_ERROR)
+	{
+		cerr << "listen failed: " << WSAGetLastError() << endl;
+		closesocket(lsitenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	cout << "listening on port: " << port << endl;
+
+	// accept a client socket
+	SOCKET clientSocket = accept(lsitenSocket, nullptr, nullptr);
+	if (clientSocket == INVALID_SOCKET)
+	{
+		cerr << "invalid client socket: " << WSAGetLastError() << endl;
+		closesocket(lsitenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	char buffer[4096];
+	int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+
+	string message;
+	if (bytesReceived > 0)
+	{
+		message = string(buffer, 0, bytesReceived);
+		cout << "message from client: " << message << endl;
+	}
+	else if (bytesReceived == 0)
+	{
+		cout << "client disconnected" << endl;
+	}
+	else
+	{
+		cerr << "recieve failed: " << WSAGetLastError() << endl;
+		return 1;
+	}
+
+	closesocket(clientSocket);
+	closesocket(lsitenSocket);
 
 	WSACleanup();
 
