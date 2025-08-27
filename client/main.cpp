@@ -42,15 +42,13 @@ int main()
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
 
-    if (InetPton(AF_INET, serverAdd.c_str(), &serverAddr.sin_addr) != 1)
+    if (inet_pton(AF_INET, serverAdd.c_str(), &serverAddr.sin_addr) != 1)
     {
         cerr << "setting address failed: " << WSAGetLastError() << endl;
         closesocket(s);
         WSACleanup();
         return 1;
     };
-
-    // inet_pton(s, serverAdd.c_str(), &serverAddr.sin_addr);
 
     if (connect(s, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
     {
@@ -61,7 +59,20 @@ int main()
     }
 
     cout << "connected to server" << endl;
-    
+
+    // send and receive data
+    string message = "Hello from client";
+    int bytesSent = send(s, message.c_str(), static_cast<int>(message.size()), 0);
+    if (bytesSent == SOCKET_ERROR)
+    {
+        cerr << "send failed: " << WSAGetLastError() << endl;
+        closesocket(s);
+        WSACleanup();
+        return 1;
+    }
+
+    closesocket(s);
+    WSACleanup();
 
     return 0;
 }
