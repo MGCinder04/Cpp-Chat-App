@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// CHANGE: small helper to send all bytes (handles partial sends)
+// helper to send all bytes (handles partial sends)
 static bool send_all(SOCKET s, const char *data, int len)
 {
     int sent = 0;
@@ -22,7 +22,7 @@ static bool send_all(SOCKET s, const char *data, int len)
 
 bool initialize()
 {
-    // CHANGE: zero-init WSADATA and check WSAStartup result
+    // zero-init WSADATA and check WSAStartup result
     WSADATA wsa{};
     int r = WSAStartup(MAKEWORD(2, 2), &wsa);
     if (r != 0)
@@ -41,9 +41,9 @@ int main()
         return 1;
     }
 
-    cout << "client program" << endl;
+    cout << "-------Client Program-------" << endl;
 
-    // CHANGE: use IPPROTO_TCP (explicit) and check right away
+    // initialize socket
     SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (s == INVALID_SOCKET)
     {
@@ -52,27 +52,23 @@ int main()
         return 1;
     }
 
-    // (Optional) CHANGE: disable Nagle if you want low-latency small messages
-    // BOOL flag = TRUE;
-    // setsockopt(s, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&flag), sizeof(flag));
-
+    // server address and port
     string serverAdd = "127.0.0.1";
     int port = 41030;
-
-    // CHANGE: zero-initialize sockaddr_in to avoid garbage padding
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
 
-    // CHANGE: inet_pton returns 1 on success, 0 invalid, -1 error
     if (inet_pton(AF_INET, serverAdd.c_str(), &serverAddr.sin_addr) != 1)
     {
         cerr << "inet_pton failed (invalid address or error)" << endl;
-        closesocket(s); // CHANGE: ensure we close the socket on all error paths
+        closesocket(s); 
         WSACleanup();
         return 1;
     }
 
+
+    // connect to server
     if (connect(s, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
     {
         cerr << "connect failed: " << WSAGetLastError() << endl;
@@ -83,7 +79,7 @@ int main()
 
     cout << "connected to server" << endl;
 
-    // CHANGE: robust send (handle partial sends)
+    // send a message
     const string message = "Hello from client";
     if (!send_all(s, message.c_str(), static_cast<int>(message.size())))
     {
@@ -93,10 +89,10 @@ int main()
         return 1;
     }
 
-    // CHANGE: graceful half-close for send; still can recv server reply
+    // indicate we're done sending
     shutdown(s, SD_SEND);
 
-    // CHANGE: optionally read server response (non-blocking if server closes)
+    // receive a response
     char buf[4096];
     int n = recv(s, buf, sizeof(buf), 0);
     if (n > 0)
@@ -115,7 +111,6 @@ int main()
         return 1;
     }
 
-    // CHANGE: final close/cleanup on success path too
     closesocket(s);
     WSACleanup();
     return 0;
