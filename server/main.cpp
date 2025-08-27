@@ -20,8 +20,10 @@ bool initialize()
 int main()
 {
 	if (!initialize())
+	{
+		cerr << "Initialization failed" << endl;
 		return 1;
-
+	}
 
 	cout << "server program" << endl;
 
@@ -35,7 +37,7 @@ int main()
 
 	BOOL exclusive = TRUE;
 	setsockopt(listenSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-		reinterpret_cast<const char*>(&exclusive), sizeof(exclusive));
+			   reinterpret_cast<const char *>(&exclusive), sizeof(exclusive));
 
 	int port = 41030;
 	sockaddr_in serverAddr{}; // zero-initialize
@@ -43,14 +45,13 @@ int main()
 	serverAddr.sin_port = htons(port);
 	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); // 0.0.0.0
 
-	if (bind(listenSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
+	if (bind(listenSocket, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
 	{
 		cerr << "bind failed: " << WSAGetLastError() << endl;
 		closesocket(listenSocket);
 		WSACleanup();
 		return 1;
 	}
-
 
 	if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
 	{
