@@ -129,6 +129,7 @@ int main()
 		}
 		clients.push_back(clientSocket);
 		thread t1(interactWithClient, clientSocket, std::ref(clients));
+		t1.detach();
 	};
 
 	cout << "client connected" << endl;
