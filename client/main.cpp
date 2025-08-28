@@ -127,8 +127,8 @@ int main()
     thread sendThread(sendMessage, s);
     thread recvThread(receiveMessage, s);
 
-   sendThread.detach();
-   recvThread.detach();
+   sendThread.join();
+   recvThread.join();
 
     // indicate we're done sending
     shutdown(s, SD_SEND);
