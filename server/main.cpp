@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <thread>
-#include <mutex> 
+#include <mutex>
 #include <algorithm>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -26,7 +26,7 @@ static bool send_all(SOCKET s, const char *data, int len)
 
 static bool initialize()
 {
-	WSADATA wsa{}; 
+	WSADATA wsa{};
 	int r = WSAStartup(MAKEWORD(2, 2), &wsa);
 	if (r != 0)
 	{
@@ -37,10 +37,10 @@ static bool initialize()
 }
 
 // Shared state
-static vector<SOCKET> g_clients; 
-static mutex g_clients_mtx;		 
+static vector<SOCKET> g_clients;
+static mutex g_clients_mtx;
 
-//remove a client from the shared list
+// remove a client from the shared list
 static void remove_client(SOCKET s)
 {
 	lock_guard<mutex> lock(g_clients_mtx);
@@ -131,7 +131,7 @@ int main()
 	sockaddr_in serverAddr{};
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(port);
-	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if (bind(listenSocket, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
 	{
@@ -154,7 +154,12 @@ int main()
 	// Accept loop
 	for (;;)
 	{
-		SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
+		sockaddr_in clientAddr{};		  
+		int addrLen = sizeof(clientAddr); 
+		SOCKET clientSocket = accept(	  
+			listenSocket,
+			reinterpret_cast<sockaddr *>(&clientAddr),
+			&addrLen);
 		if (clientSocket == INVALID_SOCKET)
 		{
 			int e = WSAGetLastError();
@@ -164,17 +169,20 @@ int main()
 			continue;
 		}
 
+		
+		char ip[INET_ADDRSTRLEN]{};								  
+		inet_ntop(AF_INET, &clientAddr.sin_addr, ip, sizeof(ip)); 
+		cout << "client connected: " << ip << ":"				  
+			 << ntohs(clientAddr.sin_port) << endl;				  
+
 		{
 			lock_guard<mutex> lock(g_clients_mtx);
 			g_clients.push_back(clientSocket);
 		}
 
-		
 		thread(interactWithClient, clientSocket).detach();
 	}
 
-	// NOTE: In this simple server we never break out of accept loop normally.
-	// If you add a shutdown condition, close all clients here.
 
 	shutdown(listenSocket, SD_BOTH);
 	closesocket(listenSocket);
