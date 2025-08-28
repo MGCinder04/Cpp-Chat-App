@@ -2,6 +2,7 @@
 #include <string>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <thread>
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -33,6 +34,51 @@ bool initialize()
     return true;
 }
 
+void sendMessage(SOCKET s)
+{
+    cout << "Enter your chat name: " << endl;
+    string name;
+    getline(cin, name);
+    string message;
+    cout << "Type /quit to exit" << endl;
+    while (true)
+    {
+        cout << "> ";
+        getline(cin, message);
+        if (message == "/quit")
+        {
+            break;
+        }
+        string fullMessage = name + ": " + message;
+        int bytesSent = send(s, fullMessage.c_str(), static_cast<int>(fullMessage.size()), 0);
+        if (bytesSent == SOCKET_ERROR)
+        {
+            cerr << "send failed: " << WSAGetLastError() << endl;
+            break;
+        }
+    }
+    closesocket(s);
+    WSACleanup();
+}
+
+void receiveMessage(SOCKET s)
+{
+    char buf[4096];
+    int n = recv(s, buf, sizeof(buf), 0);
+    if (n > 0)
+    {
+        cout << "server says: " << string(buf, buf + n) << endl;
+    }
+    else if (n == 0)
+    {
+        cout << "server closed connection" << endl;
+    }
+    else
+    {
+        cerr << "recv failed: " << WSAGetLastError() << endl;
+    }
+}
+
 int main()
 {
     if (!initialize())
@@ -62,11 +108,10 @@ int main()
     if (inet_pton(AF_INET, serverAdd.c_str(), &serverAddr.sin_addr) != 1)
     {
         cerr << "inet_pton failed (invalid address or error)" << endl;
-        closesocket(s); 
+        closesocket(s);
         WSACleanup();
         return 1;
     }
-
 
     // connect to server
     if (connect(s, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
@@ -79,39 +124,35 @@ int main()
 
     cout << "connected to server" << endl;
 
-    // send a message
-    const string message = "Hello from client";
-    if (!send_all(s, message.c_str(), static_cast<int>(message.size())))
-    {
-        cerr << "send failed: " << WSAGetLastError() << endl;
-        closesocket(s);
-        WSACleanup();
-        return 1;
-    }
+    thread sendThread(sendMessage, s);
+    thread recvThread(receiveMessage, s);
+
+   sendThread.detach();
+   recvThread.detach();
 
     // indicate we're done sending
     shutdown(s, SD_SEND);
 
-    // receive a response
-    char buf[4096];
-    int n = recv(s, buf, sizeof(buf), 0);
-    if (n > 0)
-    {
-        cout << "server says: " << string(buf, buf + n) << endl;
-    }
-    else if (n == 0)
-    {
-        cout << "server closed connection" << endl;
-    }
-    else
-    {
-        cerr << "recv failed: " << WSAGetLastError() << endl;
-        closesocket(s);
-        WSACleanup();
-        return 1;
-    }
+    // // receive a response
+    // char buf[4096];
+    // int n = recv(s, buf, sizeof(buf), 0);
+    // if (n > 0)
+    // {
+    //     cout << "server says: " << string(buf, buf + n) << endl;
+    // }
+    // else if (n == 0)
+    // {
+    //     cout << "server closed connection" << endl;
+    // }
+    // else
+    // {
+    //     cerr << "recv failed: " << WSAGetLastError() << endl;
+    //     closesocket(s);
+    //     WSACleanup();
+    //     return 1;
+    // }
 
-    closesocket(s);
-    WSACleanup();
+    // closesocket(s);
+    // WSACleanup();
     return 0;
 }
