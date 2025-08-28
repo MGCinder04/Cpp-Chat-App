@@ -23,8 +23,7 @@ static bool send_all(SOCKET s, const char *data, int len)
 
 bool initialize()
 {
-    // zero-init WSADATA and check WSAStartup result
-    WSADATA wsa{};
+    WSADATA wsa{}; // FIX: zero-init
     int r = WSAStartup(MAKEWORD(2, 2), &wsa);
     if (r != 0)
     {
@@ -39,43 +38,51 @@ void sendMessage(SOCKET s)
     cout << "Enter your chat name: " << endl;
     string name;
     getline(cin, name);
-    string message;
+
     cout << "Type /quit to exit" << endl;
+    string message;
     while (true)
     {
         cout << "> ";
-        getline(cin, message);
-        if (message == "/quit")
-        {
+        if (!getline(cin, message))
             break;
-        }
+        if (message == "/quit")
+            break;
+
         string fullMessage = name + ": " + message;
-        int bytesSent = send(s, fullMessage.c_str(), static_cast<int>(fullMessage.size()), 0);
-        if (bytesSent == SOCKET_ERROR)
+
+        if (!send_all(s, fullMessage.c_str(), static_cast<int>(fullMessage.size())))
         {
             cerr << "send failed: " << WSAGetLastError() << endl;
             break;
         }
     }
-    closesocket(s);
-    WSACleanup();
 }
 
 void receiveMessage(SOCKET s)
 {
     char buf[4096];
-    int n = recv(s, buf, sizeof(buf), 0);
-    if (n > 0)
+    for (;;)
     {
-        cout << "server says: " << string(buf, buf + n) << endl;
-    }
-    else if (n == 0)
-    {
-        cout << "server closed connection" << endl;
-    }
-    else
-    {
-        cerr << "recv failed: " << WSAGetLastError() << endl;
+        int n = recv(s, buf, sizeof(buf), 0);
+        if (n > 0)
+        {
+            cout << "\nserver says: " << string(buf, buf + n) << "\n> " << flush;
+        }
+        else if (n == 0)
+        {
+            cout << "\nserver closed connection\n";
+            break;
+        }
+        else
+        {
+            int e = WSAGetLastError();
+            if (e == WSAESHUTDOWN || e == WSAECONNRESET || e == WSAENOTSOCK)
+                break;
+
+            cerr << "\nrecv failed: " << e << "\n";
+            break;
+        }
     }
 }
 
@@ -89,7 +96,6 @@ int main()
 
     cout << "-------Client Program-------" << endl;
 
-    // initialize socket
     SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (s == INVALID_SOCKET)
     {
@@ -98,9 +104,9 @@ int main()
         return 1;
     }
 
-    // server address and port
     string serverAdd = "127.0.0.1";
     int port = 41030;
+
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
@@ -113,7 +119,6 @@ int main()
         return 1;
     }
 
-    // connect to server
     if (connect(s, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
     {
         cerr << "connect failed: " << WSAGetLastError() << endl;
@@ -127,32 +132,20 @@ int main()
     thread sendThread(sendMessage, s);
     thread recvThread(receiveMessage, s);
 
-   sendThread.join();
-   recvThread.join();
+    // wait for the sender to finish (/quit)
+    sendThread.join();
 
-    // indicate we're done sending
+    // graceful shutdown: we’re done sending; tell server (FIN)
     shutdown(s, SD_SEND);
 
-    // // receive a response
-    // char buf[4096];
-    // int n = recv(s, buf, sizeof(buf), 0);
-    // if (n > 0)
-    // {
-    //     cout << "server says: " << string(buf, buf + n) << endl;
-    // }
-    // else if (n == 0)
-    // {
-    //     cout << "server closed connection" << endl;
-    // }
-    // else
-    // {
-    //     cerr << "recv failed: " << WSAGetLastError() << endl;
-    //     closesocket(s);
-    //     WSACleanup();
-    //     return 1;
-    // }
+    // If the server doesn’t send anything and keeps the socket open,
+    // recvThread could block. To guarantee exit, you can uncomment next line:
+    // shutdown(s, SD_BOTH);  // force recv to unblock
 
-    // closesocket(s);
-    // WSACleanup();
+    // wait for receiver to finish
+    recvThread.join();
+
+    closesocket(s);
+    WSACleanup();
     return 0;
 }
